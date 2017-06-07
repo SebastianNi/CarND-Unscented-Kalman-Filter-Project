@@ -102,6 +102,14 @@ public:
    * @param meas_package The measurement at k+1
    */
   void UpdateRadar(MeasurementPackage meas_package);
+
+private:
+
+  // Variables to track how many NIS values for lidar and radar are lower than the defined threshold
+  int low_NIS_lidar_counter_;
+  int total_NIS_lidar_counter_;
+  int low_NIS_radar_counter_;
+  int total_NIS_radar_counter_;
 };
 
 #endif /* UKF_H */

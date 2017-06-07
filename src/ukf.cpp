@@ -24,7 +24,7 @@ UKF::UKF() {
   P_ = MatrixXd(5, 5);
 
   // Process noise standard deviation longitudinal acceleration in m/s^2
-  std_a_ = 0.2;
+  std_a_ = 0.25;
 
   // Process noise standard deviation yaw acceleration in rad/s^2
   std_yawdd_ = 0.2;
@@ -72,6 +72,12 @@ UKF::UKF() {
 
   // Initialize the weights of sigma points
   weights_ = VectorXd(2 * n_aug_ + 1);
+
+  // Initialize the variables to track how many NIS values for lidar and radar are lower than the defined threshold
+  low_NIS_lidar_counter_ = 0;
+  total_NIS_lidar_counter_ = 0;
+  low_NIS_radar_counter_ = 0;
+  total_NIS_radar_counter_ = 0;
 }
 
 UKF::~UKF() {}
@@ -91,8 +97,8 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
   if (!is_initialized_) {
 
     // Initialize P as identity matrix
-    P_ << 1, 0, 0, 0, 0,
-          0, 1, 0, 0, 0,
+    P_ << 0.15, 0, 0, 0, 0,
+          0, 0.15, 0, 0, 0,
           0, 0, 1, 0, 0,
           0, 0, 0, 1, 0,
           0, 0, 0, 0, 1;
@@ -106,7 +112,7 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
       float rho_dot = meas_package.raw_measurements_[2];
       x_ << rho*cos(phi),  // p_x
             rho*sin(phi),  // p_y
-            0,  // v                TODO Think about it again!!!
+            rho_dot,  // v
             0,  // yaw
             0;  // yaw rate
     } else if (meas_package.sensor_type_ == MeasurementPackage::LASER) {
@@ -387,8 +393,13 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
     x_ = x_ + K * z_diff;
     P_ = P_ - K * S * K.transpose();
 
-    // Print the NIS value
-    cout << "NIS_lidar_ = " << z_diff.transpose() * S.inverse() * z_diff << '\n';
+    // Print the NIS value --> 95% of the values should be lower than 5.991
+    float NIS_lidar = z_diff.transpose() * S.inverse() * z_diff;
+    total_NIS_lidar_counter_++;
+    if (NIS_lidar <= 5.991) {
+      low_NIS_lidar_counter_++;
+    }
+    cout << "NIS_lidar = " << NIS_lidar << '\t' << 100.0 * low_NIS_lidar_counter_ / total_NIS_lidar_counter_ << '%' << '\n';
 }
 
 /**
@@ -515,6 +526,11 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
   x_ = x_ + K * z_diff;
   P_ = P_ - K * S * K.transpose();
 
-  // Print the NIS value
-  cout << "NIS_radar_ = " << z_diff.transpose() * S.inverse() * z_diff << '\t';
+  // Print the NIS value --> 95% of the values should be lower than 7.815
+  float NIS_radar = z_diff.transpose() * S.inverse() * z_diff;
+  total_NIS_radar_counter_++;
+  if (NIS_radar <= 7.815) {
+    low_NIS_radar_counter_++;
+  }
+  cout << "NIS_radar = " << NIS_radar << '\t' << 100.0 * low_NIS_radar_counter_ / total_NIS_radar_counter_ << '%' << '\n';
 }
