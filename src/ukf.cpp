@@ -127,6 +127,23 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
     is_initialized_ = true;
     return;
   }
+
+  // Compute the time elapsed between the current and previous measurements
+  float dt = (meas_package.timestamp_ - time_us_) / 1000000.0; // dt - expressed in seconds
+  time_us_ = meas_package.timestamp_;
+
+  // Do the prediction
+  Prediction(dt);
+
+  if (meas_package.sensor_type_ == MeasurementPackage::RADAR) {
+      // Radar updates
+      // Do the measurement update
+      UpdateRadar(meas_package);
+    } else {
+      // Laser updates
+      // Do the measurement update
+      UpdateLidar(meas_package);
+    }
 }
 
 /**
@@ -369,6 +386,9 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
     // Update state mean and covariance matrix
     x_ = x_ + K * z_diff;
     P_ = P_ - K * S * K.transpose();
+
+    // Print the NIS value
+    cout << "NIS_lidar_ = " << z_diff.transpose() * S.inverse() * z_diff << '\n';
 }
 
 /**
@@ -494,4 +514,7 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
   // Update state mean and covariance matrix
   x_ = x_ + K * z_diff;
   P_ = P_ - K * S * K.transpose();
+
+  // Print the NIS value
+  cout << "NIS_radar_ = " << z_diff.transpose() * S.inverse() * z_diff << '\t';
 }
